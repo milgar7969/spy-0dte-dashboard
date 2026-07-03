@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPY 0DTE — KPI Dashboard</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root { --bs-body-bg:#0f172a; --bs-body-color:#e2e8f0; --card-bg:#1e293b;
+           --border-color:#334155; --accent:#22d3ee; }
+  body { background:var(--bs-body-bg); color:var(--bs-body-color); font-family:'Segoe UI',sans-serif; }
+  .card { background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; }
+  .card-title { color:var(--accent); font-size:0.75rem; text-transform:uppercase;
+                 letter-spacing:1px; font-weight:600; }
+  .stat-val { font-size:1.4rem; font-weight:700; }
+  .stat-sub { font-size:0.75rem; color:#94a3b8; }
+  .section-title { color:var(--accent); font-size:0.8rem; text-transform:uppercase;
+                    letter-spacing:2px; font-weight:600; border-bottom:1px solid var(--border-color);
+                    padding-bottom:8px; margin-bottom:16px; }
+  .table { color:var(--bs-body-color); font-size:0.8rem; }
+  .table th { color:var(--accent); font-weight:600; font-size:0.72rem; text-transform:uppercase;
+               letter-spacing:0.5px; border-color:var(--border-color); background:#0f172a; }
+  .table td { border-color:var(--border-color); vertical-align:middle; }
+  .table tbody tr:hover { background:rgba(34,211,238,0.05); }
+  /* Brighter secondary/muted text for readability on the dark background */
+  .text-muted, small.text-muted { color:#cbd5e1 !important; }
+  .stat-sub { color:#cbd5e1; }
+  /* Sortable table headers */
+  table.sortable th { cursor:pointer; user-select:none; white-space:nowrap; }
+  table.sortable th:hover { color:#e2e8f0; }
+  table.sortable th::after { content:"\2195"; opacity:0.35; font-size:0.7em; margin-left:4px; }
+  table.sortable th.asc::after  { content:"\2191"; opacity:0.9; }
+  table.sortable th.desc::after { content:"\2193"; opacity:0.9; }
+  ::-webkit-scrollbar { width:6px; height:6px; }
+  ::-webkit-scrollbar-track { background:#1e293b; }
+  ::-webkit-scrollbar-thumb { background:#334155; border-radius:3px; }
+</style>
+</head>
+<body>
+<div class="container-fluid px-4 pt-4 pb-2">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h4 class="mb-0 fw-bold" style="color:#22d3ee;">⚡ SPY 0DTE — KPI Dashboard
+        <span style="color:#94a3b8;font-size:0.85rem;font-weight:400;">(paper, gamma-explosion strategy)</span></h4>
+      <small class="text-muted">2026-07-22 → 2026-08-21 &nbsp;|&nbsp; 22 trading days
+        &nbsp;|&nbsp; Generated 2026-08-21 12:00</small>
+    </div>
+  </div>
+
+  <div class="row g-2 mb-4 flex-nowrap"><div class="col"><div class="card px-2 py-2 text-center">
+<div class="card-title mb-0">Net P&L (actual)</div>
+<div class="stat-val fs-5 fw-bold text-danger">-$315.50</div>
+<div class="stat-sub">-$159.00 booked, -$156.50 ghosts</div></div></div><div class="col"><div class="card px-2 py-2 text-center">
+<div class="card-title mb-0">Trades</div>
+<div class="stat-val fs-5 fw-bold ">139</div>
+<div class="stat-sub">69 W / 70 L</div></div></div><div class="col"><div class="card px-2 py-2 text-center">
+<div class="card-title mb-0">Win Rate</div>
+<div class="stat-val fs-5 fw-bold text-warning">49.6%</div>
+<div class="stat-sub">EV -$1.14/trade</div></div></div><div class="col"><div class="card px-2 py-2 text-center">
+<div class="card-title mb-0">Profit Factor</div>
+<div class="stat-val fs-5 fw-bold text-warning">0.95</div>
+<div class="stat-sub">avg W +$44.74 / L -$46.37</div></div></div><div class="col"><div class="card px-2 py-2 text-center">
+<div class="card-title mb-0">Green Days</div>
+<div class="stat-val fs-5 fw-bold ">12/22</div>
+<div class="stat-sub">avg hold 4.8 min</div></div></div><div class="col"><div class="card px-2 py-2 text-center">
+<div class="card-title mb-0">Ghost Events</div>
+<div class="stat-val fs-5 fw-bold text-warning">16</div>
+<div class="stat-sub">net -$156.50</div></div></div></div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-8">
+      <div class="card p-3">
+        <div class="section-title">Equity Curve (cumulative, incl. ghosts)</div>
+        <canvas id="eq" height="90"></canvas>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card p-3">
+        <div class="section-title">Daily P&L</div>
+        <canvas id="daily" height="185"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card p-3">
+        <div class="section-title">P&L by Exit Reason</div>
+        <table class="table table-sm mb-0 sortable"><thead>
+          <tr><th>Reason</th><th>N</th><th>Win%</th><th>P&L</th></tr></thead>
+          <tbody><tr><td>peak_trail</td><td>61</td><td>100%</td><td class="text-success">+$2,188.00</td></tr><tr><td>tp</td><td>7</td><td>100%</td><td class="text-success">+$871.00</td></tr><tr><td>stop</td><td>1</td><td>0%</td><td class="text-danger">-$138.00</td></tr><tr><td>spy_stop</td><td>70</td><td>1%</td><td class="text-danger">-$3,080.00</td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card p-3">
+        <div class="section-title">P&L by Side</div>
+        <table class="table table-sm mb-0 sortable"><thead>
+          <tr><th>Side</th><th>N</th><th>Win%</th><th>P&L</th></tr></thead>
+          <tbody><tr><td>call</td><td>64</td><td>47%</td><td class="text-danger">-$48.00</td></tr><tr><td>put</td><td>75</td><td>52%</td><td class="text-danger">-$111.00</td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card p-3">
+        <div class="section-title">P&L by Entry Hour</div>
+        <canvas id="hours" height="150"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-5">
+      <div class="card p-3">
+        <div class="section-title">ORB Shadow Filter (observe-only, live since 2026-06-30)</div>
+        <div class="d-flex gap-4 mb-2">
+          <div><div class="card-title">Actual</div><div class="stat-val fs-6">-$159.00</div></div>
+          <div><div class="card-title">If Filtered</div><div class="stat-val fs-6">+$112.00</div></div>
+          <div><div class="card-title">Filter Effect</div><div class="stat-val fs-6 text-success">+$271.00</div></div>
+        </div>
+        <div class="stat-sub mb-2">Blocked: 18 losses (-$870.00),
+          18 wins (+$599.00)
+          over 22 shadow days</div>
+        <table class="table table-sm mb-0 sortable"><thead>
+          <tr><th>Entry</th><th>Trade</th><th>Bias</th><th>Exit</th><th>P&L</th></tr></thead>
+          <tbody><tr><td>2026-07-22 10:24</td><td>put 746</td><td>call</td><td>peak_trail</td><td class="text-success">+$36.00</td></tr><tr><td>2026-07-23 12:23</td><td>call 741</td><td>put</td><td>peak_trail</td><td class="text-success">+$24.00</td></tr><tr><td>2026-07-23 13:32</td><td>put 738</td><td>call</td><td>peak_trail</td><td class="text-success">+$45.00</td></tr><tr><td>2026-07-23 13:41</td><td>put 736</td><td>call</td><td>spy_stop</td><td class="text-danger">-$36.00</td></tr><tr><td>2026-07-24 09:47</td><td>call 740</td><td>put</td><td>peak_trail</td><td class="text-success">+$15.00</td></tr><tr><td>2026-07-24 10:23</td><td>call 741</td><td>put</td><td>peak_trail</td><td class="text-success">+$12.00</td></tr><tr><td>2026-07-24 10:51</td><td>call 741</td><td>put</td><td>spy_stop</td><td class="text-danger">-$50.00</td></tr><tr><td>2026-07-24 10:58</td><td>call 741</td><td>put</td><td>peak_trail</td><td class="text-success">+$45.00</td></tr><tr><td>2026-07-28 10:49</td><td>call 741</td><td>put</td><td>peak_trail</td><td class="text-success">+$24.00</td></tr><tr><td>2026-07-28 14:01</td><td>call 743</td><td>put</td><td>spy_stop</td><td class="text-danger">-$77.00</td></tr><tr><td>2026-07-29 09:52</td><td>put 736</td><td>call</td><td>peak_trail</td><td class="text-success">+$16.00</td></tr><tr><td>2026-07-30 10:49</td><td>put 736</td><td>call</td><td>peak_trail</td><td class="text-success">+$43.00</td></tr><tr><td>2026-07-30 11:48</td><td>call 739</td><td>put</td><td>spy_stop</td><td class="text-danger">-$24.00</td></tr><tr><td>2026-07-30 11:56</td><td>call 739</td><td>put</td><td>spy_stop</td><td class="text-danger">-$36.00</td></tr><tr><td>2026-07-31 09:48</td><td>put 741</td><td>call</td><td>peak_trail</td><td class="text-success">+$14.00</td></tr><tr><td>2026-07-31 10:54</td><td>call 745</td><td>put</td><td>spy_stop</td><td class="text-danger">-$56.00</td></tr><tr><td>2026-07-31 11:12</td><td>put 740</td><td>call</td><td>spy_stop</td><td class="text-danger">-$38.00</td></tr><tr><td>2026-07-31 11:23</td><td>put 740</td><td>call</td><td>tp</td><td class="text-success">+$104.00</td></tr><tr><td>2026-08-06 09:48</td><td>call 772</td><td>put</td><td>spy_stop</td><td class="text-danger">-$30.00</td></tr><tr><td>2026-08-06 10:39</td><td>put 769</td><td>call</td><td>spy_stop</td><td class="text-danger">-$63.00</td></tr><tr><td>2026-08-06 10:47</td><td>put 769</td><td>call</td><td>spy_stop</td><td class="text-danger">-$70.00</td></tr><tr><td>2026-08-12 10:19</td><td>call 774</td><td>put</td><td>spy_stop</td><td class="text-danger">-$20.00</td></tr><tr><td>2026-08-12 10:25</td><td>call 774</td><td>put</td><td>spy_stop</td><td class="text-danger">-$18.00</td></tr><tr><td>2026-08-12 10:42</td><td>call 773</td><td>put</td><td>spy_stop</td><td class="text-danger">-$38.00</td></tr><tr><td>2026-08-13 10:50</td><td>put 777</td><td>call</td><td>spy_stop</td><td class="text-danger">-$54.00</td></tr><tr><td>2026-08-13 11:09</td><td>put 775</td><td>call</td><td>spy_stop</td><td class="text-danger">-$40.00</td></tr><tr><td>2026-08-19 09:50</td><td>put 767</td><td>call</td><td>peak_trail</td><td class="text-success">+$24.00</td></tr><tr><td>2026-08-19 10:30</td><td>call 771</td><td>put</td><td>peak_trail</td><td class="text-success">+$20.00</td></tr><tr><td>2026-08-19 10:38</td><td>call 772</td><td>put</td><td>peak_trail</td><td class="text-success">+$55.00</td></tr><tr><td>2026-08-19 11:42</td><td>put 770</td><td>call</td><td>spy_stop</td><td class="text-danger">-$51.00</td></tr><tr><td>2026-08-20 10:15</td><td>put 764</td><td>call</td><td>peak_trail</td><td class="text-success">+$24.00</td></tr><tr><td>2026-08-20 11:09</td><td>put 765</td><td>call</td><td>peak_trail</td><td class="text-success">+$24.00</td></tr><tr><td>2026-08-20 11:22</td><td>put 764</td><td>call</td><td>spy_stop</td><td class="text-danger">-$91.00</td></tr><tr><td>2026-08-20 11:34</td><td>put 764</td><td>call</td><td>peak_trail</td><td class="text-success">+$35.00</td></tr><tr><td>2026-08-21 10:07</td><td>call 767</td><td>put</td><td>spy_stop</td><td class="text-danger">-$78.00</td></tr><tr><td>2026-08-21 10:58</td><td>call 766</td><td>put</td><td>peak_trail</td><td class="text-success">+$39.00</td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="col-md-7">
+      <div class="card p-3">
+        <div class="section-title">Daily Detail</div>
+        <div style="max-height:320px;overflow-y:auto;">
+        <table class="table table-sm mb-0 sortable"><thead>
+          <tr><th>Date</th><th>Trades</th><th>W/N</th><th>Booked</th><th>Ghosts</th><th>Actual</th></tr></thead>
+          <tbody><tr><td>2026-08-21</td><td>5</td><td>2/5</td><td class="text-danger">-$106.00</td><td>—</td><td class="text-danger">-$106.00</td></tr><tr><td>2026-08-20</td><td>7</td><td>4/7</td><td class="text-success">+$4.00</td><td>+$9.00</td><td class="text-success">+$13.00</td></tr><tr><td>2026-08-19</td><td>6</td><td>4/6</td><td class="text-danger">-$69.00</td><td>—</td><td class="text-danger">-$69.00</td></tr><tr><td>2026-08-18</td><td>5</td><td>2/5</td><td class="text-danger">-$130.00</td><td>-$37.00</td><td class="text-danger">-$167.00</td></tr><tr><td>2026-08-17</td><td>1</td><td>0/1</td><td class="text-danger">-$60.00</td><td>—</td><td class="text-danger">-$60.00</td></tr><tr><td>2026-08-14</td><td>3</td><td>2/3</td><td class="text-success">+$69.00</td><td>-$42.00</td><td class="text-success">+$27.00</td></tr><tr><td>2026-08-13</td><td>3</td><td>1/3</td><td class="text-danger">-$46.00</td><td>—</td><td class="text-danger">-$46.00</td></tr><tr><td>2026-08-12</td><td>7</td><td>0/7</td><td class="text-danger">-$261.00</td><td>+$19.00</td><td class="text-danger">-$242.00</td></tr><tr><td>2026-08-11</td><td>1</td><td>1/1</td><td class="text-success">+$48.00</td><td>—</td><td class="text-success">+$48.00</td></tr><tr><td>2026-08-07</td><td>4</td><td>2/4</td><td class="text-success">+$99.00</td><td>—</td><td class="text-success">+$99.00</td></tr><tr><td>2026-08-06</td><td>7</td><td>2/7</td><td class="text-danger">-$248.00</td><td>-$72.00</td><td class="text-danger">-$320.00</td></tr><tr><td>2026-08-05</td><td>6</td><td>3/6</td><td class="text-success">+$24.00</td><td>—</td><td class="text-success">+$24.00</td></tr><tr><td>2026-08-04</td><td>6</td><td>5/6</td><td class="text-success">+$346.00</td><td>—</td><td class="text-success">+$346.00</td></tr><tr><td>2026-08-03</td><td>2</td><td>2/2</td><td class="text-success">+$122.00</td><td>—</td><td class="text-success">+$122.00</td></tr><tr><td>2026-07-31</td><td>7</td><td>5/7</td><td class="text-success">+$124.00</td><td>—</td><td class="text-success">+$124.00</td></tr><tr><td>2026-07-30</td><td>11</td><td>3/11</td><td class="text-danger">-$212.00</td><td>—</td><td class="text-danger">-$212.00</td></tr><tr><td>2026-07-29</td><td>11</td><td>5/11</td><td class="text-success">+$32.00</td><td>—</td><td class="text-success">+$32.00</td></tr><tr><td>2026-07-28</td><td>9</td><td>3/9</td><td class="text-danger">-$222.00</td><td>-$14.00</td><td class="text-danger">-$236.00</td></tr><tr><td>2026-07-27</td><td>12</td><td>7/12</td><td class="text-success">+$196.00</td><td>-$24.00</td><td class="text-success">+$172.00</td></tr><tr><td>2026-07-24</td><td>10</td><td>8/10</td><td class="text-success">+$184.00</td><td>+$4.00</td><td class="text-success">+$188.00</td></tr><tr><td>2026-07-23</td><td>13</td><td>5/13</td><td class="text-danger">-$188.00</td><td>-$46.00</td><td class="text-danger">-$234.00</td></tr><tr><td>2026-07-22</td><td>3</td><td>3/3</td><td class="text-success">+$135.00</td><td>+$46.50</td><td class="text-success">+$181.50</td></tr></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-12">
+      <div class="card p-3">
+        <div class="section-title">Exit-Parameter Shadow Harness (observe-only — virtual twins, no orders)</div>
+        <table class="table table-sm mb-2 sortable"><thead>
+          <tr><th>Variant</th><th>Twin exits</th><th>Shadow P&L</th><th>vs Actual</th></tr></thead>
+          <tbody><tr><td>baseline (mirrors live) (sanity check)</td><td>139</td><td class="text-danger">-$513.00</td><td class="text-danger">-$354.00</td></tr><tr><td>tight_trail (0.92)</td><td>139</td><td class="text-danger">-$366.00</td><td class="text-danger">-$207.00</td></tr><tr><td>wide_stop (0.25 / 1.0)</td><td>139</td><td class="text-danger">-$874.00</td><td class="text-danger">-$715.00</td></tr><tr><td>both</td><td>139</td><td class="text-danger">-$899.00</td><td class="text-danger">-$740.00</td></tr><tr><td>no_spy_stop (underlying stop OFF)</td><td>55</td><td class="text-danger">-$1,666.00</td><td class="text-danger">-$1,507.00</td></tr></tbody></table>
+        <div class="stat-sub">Twins run alternative exit rules on live quotes; they place no orders. Actual booked over the same 22 day(s): -$159.00. Baseline drift vs actual: -$354.00 — investigate before trusting variants.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-12">
+      <div class="card p-3">
+        <div class="section-title">Tight-Trail vs Baseline — Running Tally (apples-to-apples twins)</div>
+        <div class="d-flex gap-4 mb-2 align-items-center flex-wrap">
+          <div><div class="card-title">Cumulative Edge</div>
+               <div class="stat-val fs-5 text-success">+$147.00</div>
+               <div class="stat-sub">tight_trail − baseline, 22 day(s)</div></div>
+          <div class="stat-sub" style="max-width:560px;">Both series are twins fed the identical live quote stream — the only difference is the peak-trail giveback (0.92 vs live 0.88), so their delta is pure signal (immune to the baseline-vs-booked drift above). Tight_trail ahead on 11 day(s), behind on 8. Positive cumulative edge = the tighter trail is capturing more of the peak.</div>
+        </div>
+        <div style="max-height:280px;overflow-y:auto;">
+        <table class="table table-sm mb-0 sortable"><thead>
+          <tr><th>Date</th><th>Baseline</th><th>Tight_trail</th><th>Edge</th><th>Cum. Edge</th></tr></thead>
+          <tbody><tr><td>2026-08-21</td><td class="text-danger">-$149.00</td><td class="text-danger">-$161.00</td><td class="text-danger">-$12.00</td><td class="text-success">+$147.00</td></tr><tr><td>2026-08-20</td><td class="text-danger">-$4.00</td><td class="text-success">+$17.00</td><td class="text-success">+$21.00</td><td class="text-success">+$159.00</td></tr><tr><td>2026-08-19</td><td class="text-danger">-$114.00</td><td class="text-danger">-$71.00</td><td class="text-success">+$43.00</td><td class="text-success">+$138.00</td></tr><tr><td>2026-08-18</td><td class="text-danger">-$140.00</td><td class="text-danger">-$104.00</td><td class="text-success">+$36.00</td><td class="text-success">+$95.00</td></tr><tr><td>2026-08-17</td><td class="text-danger">-$36.00</td><td class="text-danger">-$36.00</td><td class="text-success">+$0.00</td><td class="text-success">+$59.00</td></tr><tr><td>2026-08-14</td><td class="text-success">+$43.00</td><td class="text-success">+$16.00</td><td class="text-danger">-$27.00</td><td class="text-success">+$59.00</td></tr><tr><td>2026-08-13</td><td class="text-danger">-$72.00</td><td class="text-danger">-$80.00</td><td class="text-danger">-$8.00</td><td class="text-success">+$86.00</td></tr><tr><td>2026-08-12</td><td class="text-danger">-$278.00</td><td class="text-danger">-$278.00</td><td class="text-success">+$0.00</td><td class="text-success">+$94.00</td></tr><tr><td>2026-08-11</td><td class="text-success">+$40.00</td><td class="text-success">+$60.00</td><td class="text-success">+$20.00</td><td class="text-success">+$94.00</td></tr><tr><td>2026-08-07</td><td class="text-success">+$111.00</td><td class="text-success">+$111.00</td><td class="text-success">+$0.00</td><td class="text-success">+$74.00</td></tr><tr><td>2026-08-06</td><td class="text-danger">-$250.00</td><td class="text-danger">-$223.00</td><td class="text-success">+$27.00</td><td class="text-success">+$74.00</td></tr><tr><td>2026-08-05</td><td class="text-success">+$13.00</td><td class="text-success">+$47.00</td><td class="text-success">+$34.00</td><td class="text-success">+$47.00</td></tr><tr><td>2026-08-04</td><td class="text-success">+$352.00</td><td class="text-success">+$203.00</td><td class="text-danger">-$149.00</td><td class="text-success">+$13.00</td></tr><tr><td>2026-08-03</td><td class="text-success">+$90.00</td><td class="text-success">+$60.00</td><td class="text-danger">-$30.00</td><td class="text-success">+$162.00</td></tr><tr><td>2026-07-31</td><td class="text-success">+$106.00</td><td class="text-success">+$96.00</td><td class="text-danger">-$10.00</td><td class="text-success">+$192.00</td></tr><tr><td>2026-07-30</td><td class="text-danger">-$217.00</td><td class="text-danger">-$193.00</td><td class="text-success">+$24.00</td><td class="text-success">+$202.00</td></tr><tr><td>2026-07-29</td><td class="text-success">+$8.00</td><td class="text-success">+$31.00</td><td class="text-success">+$23.00</td><td class="text-success">+$178.00</td></tr><tr><td>2026-07-28</td><td class="text-danger">-$234.00</td><td class="text-danger">-$208.00</td><td class="text-success">+$26.00</td><td class="text-success">+$155.00</td></tr><tr><td>2026-07-27</td><td class="text-success">+$176.00</td><td class="text-success">+$147.00</td><td class="text-danger">-$29.00</td><td class="text-success">+$129.00</td></tr><tr><td>2026-07-24</td><td class="text-success">+$124.00</td><td class="text-success">+$222.00</td><td class="text-success">+$98.00</td><td class="text-success">+$158.00</td></tr><tr><td>2026-07-23</td><td class="text-danger">-$201.00</td><td class="text-danger">-$138.00</td><td class="text-success">+$63.00</td><td class="text-success">+$60.00</td></tr><tr><td>2026-07-22</td><td class="text-success">+$119.00</td><td class="text-success">+$116.00</td><td class="text-danger">-$3.00</td><td class="text-danger">-$3.00</td></tr></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-12">
+      <div class="card p-3">
+        <div class="section-title">Fix #2 Shadow — Duplicate-Order Latch (observe-only, no order-flow change)</div>
+        <div class="d-flex gap-4 mb-2 align-items-center flex-wrap">
+          <div><div class="card-title">Shadow Events</div>
+               <div class="stat-val fs-5">0</div>
+               <div class="stat-sub">would-latch fires</div></div>
+          <div><div class="card-title">Ghosts Caught</div>
+               <div class="stat-val fs-5 text-muted">0/16</div>
+               <div class="stat-sub">same-day/symbol match</div></div>
+          <div class="stat-sub" style="max-width:560px;">Shadow-log for the duplicate-order fix: logs where entry_pending would be latched on an ambiguous cancelled buy, without changing live order handling. Validates the fix before it ships.</div>
+        </div>
+        <div style="max-height:240px;overflow-y:auto;">
+        <table class="table table-sm mb-0 sortable"><thead>
+          <tr><th>When</th><th>Symbol</th><th>Outcome</th></tr></thead>
+          <tbody><tr><td colspan=3 class='text-muted'>No FIX2_SHADOW events yet — fires on the next ambiguous cancelled-buy race. Collecting.</td></tr></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-12">
+      <div class="card p-3">
+        <div class="section-title">Morning vs Afternoon — Cutoff What-If (entries before / at-or-after 12:00 ET)</div>
+        <div class="d-flex flex-wrap gap-4 align-items-center">
+          <div><div class="card-title">Morning (&lt;12:00)</div>
+               <div class="stat-val fs-6 text-success">+$150.00</div>
+               <div class="stat-sub">119 trades · 62 W</div></div>
+          <div><div class="card-title">Afternoon (12:00+)</div>
+               <div class="stat-val fs-6 text-danger">-$309.00</div>
+               <div class="stat-sub">20 trades · 7 W</div></div>
+          <div><div class="card-title">If stopped at noon</div>
+               <div class="stat-val fs-6 text-success">+$309.00</div>
+               <div class="stat-sub">effect vs booked -$159.00</div></div>
+          <div class="stat-sub" style="max-width:340px;">Afternoon has been a net drag of -$309.00; stopping new entries at noon would have improved booked P&L by +$309.00. Observation only — not enforced by the bot.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="text-muted pb-4" style="font-size:0.7rem;">Paper trading on Alpaca.
+    Ghost events = duplicate fills recovered by the sweeper; included in actual P&L.</div>
+</div>
+
+<script>
+const D = {"dates": ["2026-07-22", "2026-07-23", "2026-07-24", "2026-07-27", "2026-07-28", "2026-07-29", "2026-07-30", "2026-07-31", "2026-08-03", "2026-08-04", "2026-08-05", "2026-08-06", "2026-08-07", "2026-08-11", "2026-08-12", "2026-08-13", "2026-08-14", "2026-08-17", "2026-08-18", "2026-08-19", "2026-08-20", "2026-08-21"], "daily_pnl": [181.5, -234.0, 188.0, 172.0, -236.0, 32.0, -212.0, 124.0, 122.0, 346.0, 24.0, -320.0, 99.0, 48.0, -242.0, -46.0, 27.0, -60.0, -167.0, -69.0, 13.0, -106.0], "cum": [181.5, -52.5, 135.5, 307.5, 71.5, 103.5, -108.5, 15.5, 137.5, 483.5, 507.5, 187.5, 286.5, 334.5, 92.5, 46.5, 73.5, 13.5, -153.5, -222.5, -209.5, -315.5], "reasons": {"peak_trail": 2188.0, "spy_stop": -3080.0, "stop": -138.0, "tp": 871.0}, "hours": {"09:00": -67.0, "10:00": -60.0, "11:00": 277.0, "12:00": -169.0, "13:00": -137.0, "14:00": -3.0}};
+const gridCfg = { color:'#334155' };
+const tickCfg = { color:'#94a3b8', font:{size:10} };
+new Chart(document.getElementById('eq'), {
+  type:'line',
+  data:{ labels:D.dates, datasets:[{ data:D.cum, borderColor:'#22d3ee',
+    backgroundColor:'rgba(34,211,238,0.08)', fill:true, tension:0.25, pointRadius:3 }] },
+  options:{ plugins:{legend:{display:false}},
+    scales:{ x:{grid:gridCfg,ticks:tickCfg}, y:{grid:gridCfg,ticks:tickCfg} } }
+});
+new Chart(document.getElementById('daily'), {
+  type:'bar',
+  data:{ labels:D.dates, datasets:[{ data:D.daily_pnl,
+    backgroundColor:D.daily_pnl.map(v=>v>=0?'rgba(34,197,94,0.7)':'rgba(239,68,68,0.7)') }] },
+  options:{ plugins:{legend:{display:false}},
+    scales:{ x:{grid:gridCfg,ticks:tickCfg}, y:{grid:gridCfg,ticks:tickCfg} } }
+});
+new Chart(document.getElementById('hours'), {
+  type:'bar',
+  data:{ labels:Object.keys(D.hours), datasets:[{ data:Object.values(D.hours),
+    backgroundColor:Object.values(D.hours).map(v=>v>=0?'rgba(34,197,94,0.7)':'rgba(239,68,68,0.7)') }] },
+  options:{ plugins:{legend:{display:false}},
+    scales:{ x:{grid:gridCfg,ticks:tickCfg}, y:{grid:gridCfg,ticks:tickCfg} } }
+});
+
+// ── Sortable tables ─────────────────────────────────────────────────────────
+// Click a header to sort by that column; click again to reverse. Numbers
+// (P&L, N, %, "W/N") sort numerically, text sorts alphabetically.
+function cellNum(s) {
+  // Pull the first number out of e.g. "+$1,234.00", "90%", "12/16", "put 746"
+  const m = String(s).replace(/,/g, '').match(/-?\d+(\.\d+)?/);
+  return m ? parseFloat(m[0]) : null;
+}
+document.querySelectorAll('table.sortable').forEach(function(table) {
+  const heads = table.tHead.rows[0].cells;
+  Array.from(heads).forEach(function(th, col) {
+    th.addEventListener('click', function() {
+      const body = table.tBodies[0];
+      const rows = Array.from(body.rows).filter(r => r.cells.length === heads.length);
+      const asc  = !(th.classList.contains('asc'));
+      Array.from(heads).forEach(h => h.classList.remove('asc', 'desc'));
+      th.classList.add(asc ? 'asc' : 'desc');
+      rows.sort(function(a, b) {
+        const x = a.cells[col].textContent.trim();
+        const y = b.cells[col].textContent.trim();
+        const nx = cellNum(x), ny = cellNum(y);
+        let c;
+        if (nx !== null && ny !== null) c = nx - ny;
+        else c = x.localeCompare(y);
+        return asc ? c : -c;
+      });
+      rows.forEach(r => body.appendChild(r));
+    });
+  });
+});
+</script>
+</body>
+</html>
